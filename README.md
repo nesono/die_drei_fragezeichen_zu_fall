@@ -32,7 +32,7 @@ The app opens Apple Music links; playback and any subscription requirements are 
 - Loading indicator, network timeout, and a retry button on failure.
 - Dynamic Type, scrollable layout, and accessible button labels.
 
-The original Python script is preserved at the project root. This is a personal prototype: it has no App Store packaging. The first launch needs internet to populate the catalogue cache. Artwork and Apple Music playback are not included in this offline metadata cache. Metadata comes from dreimetadaten.de; no audio is bundled.
+The original Python script is preserved at the project root. This is a personal prototype: it has no App Store packaging. The first launch needs internet to populate the catalogue cache. Viewed artwork is cached separately for offline use; Apple Music manages audio playback and downloads. Metadata comes from dreimetadaten.de; no audio is bundled.
 
 ## Validation
 
@@ -69,3 +69,9 @@ iPad windows at least 700 points wide and 500 points tall use a dedicated two-co
 ## Catalogue cache checks
 
 Run `swiftc DreiFragezeichen/Episode.swift Tests/CacheChecks.swift -o /tmp/drei-cache-checks && /tmp/drei-cache-checks` on macOS to verify persistence, the 24-hour refresh boundary, offline fallback, invalid responses, cancellation, and corrupted-cache recovery. The catalogue is stored in Application Support, excluded from backup, and replaced atomically only after validation. Failed refreshes retain the previous timestamp and are retried on a later launch. Refresh attempts time out after 15 seconds before falling back; new releases are filtered using the current date even for cached data.
+
+## Artwork cache
+
+Viewed covers are validated and saved atomically in Application Support, excluded from backup, with no expiry or periodic revalidation. A bounded 32 MB memory cache speeds up revisits; evicted images remain on disk. The image URL identifies each entry, so a changed catalogue URL can download a new cover. Concurrent requests share a download, which finishes even if you navigate away. Failed responses are not cached; corrupt files are downloaded again. Only viewed covers are fetched. Unviewed covers still require internet, and uninstalling the app removes its saved artwork.
+
+Run `swiftc DreiFragezeichen/ArtworkCache.swift Tests/ArtworkCacheChecks.swift -o /tmp/drei-artwork-checks && /tmp/drei-artwork-checks` to check memory reuse, disk persistence while offline, concurrent requests, corruption recovery, and invalid-image retries.

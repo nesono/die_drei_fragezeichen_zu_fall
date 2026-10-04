@@ -308,27 +308,44 @@ struct ContentView: View {
 private struct EpisodeArtwork: View {
     let episode: Episode
 
+    @State private var artwork: UIImage?
+    @State private var loading = true
+
     var body: some View {
-        AsyncImage(url: episode.artworkURL) { phase in
-            ZStack {
-                RoundedRectangle(cornerRadius: 16)
-                    .fill(.white.opacity(0.04))
-                switch phase {
-                case .success(let image):
-                    image.resizable().scaledToFit()
-                case .empty where episode.artworkURL != nil:
-                    ProgressView().accessibilityLabel("Cover wird geladen")
-                default:
-                    VStack(spacing: 12) {
-                        Image(systemName: "headphones")
-                            .font(.largeTitle)
-                            .foregroundStyle(.blue)
-                        Text("Kein Cover verfügbar")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
+        ZStack {
+            RoundedRectangle(cornerRadius: 16)
+                .fill(.white.opacity(0.04))
+            if let artwork {
+                Image(uiImage: artwork).resizable().scaledToFit()
+            } else if loading && episode.artworkURL != nil {
+                ProgressView().accessibilityLabel("Cover wird geladen")
+            } else {
+                VStack(spacing: 12) {
+                    Image(systemName: "headphones")
+                        .font(.largeTitle)
+                        .foregroundStyle(.blue)
+                    Text("Kein Cover verfügbar")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
+        }
+        .task(id: episode.artworkURL) {
+            artwork = nil
+            loading = true
+            guard let url = episode.artworkURL else {
+                loading = false
+                return
+            }
+            do {
+                let data = try await ArtworkCache.shared.data(for: url)
+                // A completed request may belong to a view already navigated away from.
+                guard !Task.isCancelled else { return }
+                artwork = UIImage(data: data)
+            } catch {
+                guard !Task.isCancelled else { return }
+            }
+            loading = false
         }
         .aspectRatio(1, contentMode: .fit)
         .clipShape(RoundedRectangle(cornerRadius: 16))
