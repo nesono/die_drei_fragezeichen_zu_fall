@@ -102,3 +102,31 @@ Use the menu below the audio-output button, or Settings → Zufallsauswahl, to c
 Each random-selection pool now has a separate cycle, saved across launches. It suggests every eligible episode before repeating and avoids immediate repeats when alternatives exist. The current visible episode counts as seen when drawing again. History navigation does not reset cycles; newly eligible episodes join the remaining selection, and ineligible episodes are skipped.
 
 The library filter affects browsing only, not the saved random-selection pool. Title/number search works within each filter. Changing an episode’s heard status or saved markers updates the visible collection immediately. Each empty collection explains how to populate it or change the filter.
+
+### Automated tests in Xcode
+
+Select the **DreiFragezeichen** scheme and an iPhone or iPad simulator, then
+press **⌘U** (Product → Test). The shared scheme runs:
+
+- `DreiFragezeichenTests`: catalogue decoding, safe player links, download consent,
+  metadata refresh/offline fallback, artwork memory/disk caching and retries,
+  listening dates, collections, library filters and persistent shuffle cycles.
+- `DreiFragezeichenUITests`: back/forward navigation, library selection,
+  saved Spotify selection, favourites filtering and landscape controls.
+
+UI tests use five offline fixture episodes with placeholder covers and a separate
+preferences suite. They never open a music player. The fixture mode is compiled
+only into Debug builds. Each test resets its own preferences; normal app data is
+untouched. The standalone checks in `Tests/` remain available for quick checks.
+
+Command line (replace the destination with an installed simulator):
+
+```sh
+xcodebuild -project DreiFragezeichen.xcodeproj -scheme DreiFragezeichen \
+  -destination 'platform=iOS Simulator,name=iPhone 17e' \
+  SDK_STAT_CACHE_ENABLE=NO test
+```
+
+Real Apple Music/Spotify handoff, AirPlay/Bluetooth routing and visual checks at
+large text sizes still need device testing. UI assertions check behaviour and
+control availability, not pixel-perfect appearance.

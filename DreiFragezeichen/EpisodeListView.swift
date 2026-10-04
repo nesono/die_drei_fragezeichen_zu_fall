@@ -94,6 +94,7 @@ struct EpisodeListView: View {
                                 Button("Hörstatus bearbeiten", systemImage: "checkmark.circle") { editingListening = episode }
                             }
                             .id(episode.id)
+                            .accessibilityIdentifier("episode-\(episode.id)")
                             .buttonStyle(.plain)
                             .accessibilityLabel("Folge \(episode.numberLabel): \(episode.titel)")
                             .accessibilityValue(listening.lastListened(to: episode.id).map { "Gehört am \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "Ungehört")

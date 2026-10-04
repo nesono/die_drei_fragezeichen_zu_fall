@@ -1,0 +1,80 @@
+import Foundation
+import XCTest
+@testable import DreiFragezeichen
+import CoreGraphics
+import ImageIO
+import UniformTypeIdentifiers
+
+actor Downloads {
+    var count = 0
+    let image: Data
+    init(image: Data) { self.image = image }
+    func fetch(_ url: URL) async throws -> Data {
+        count += 1
+        try await Task.sleep(nanoseconds: 30_000_000)
+        return image
+    }
+}
+
+final class ArtworkCacheChecks: XCTestCase {
+    func testRegressionChecks() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let context = CGContext(data: nil, width: 2, height: 2, bitsPerComponent: 8,
+                                bytesPerRow: 8, space: CGColorSpaceCreateDeviceRGB(),
+                                bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
+        let output = NSMutableData()
+        let destination = CGImageDestinationCreateWithData(output, UTType.png.identifier as CFString, 1, nil)!
+        CGImageDestinationAddImage(destination, context.makeImage()!, nil)
+        XCTAssertTrue(CGImageDestinationFinalize(destination))
+        let image = output as Data
+        let downloads = Downloads(image: image)
+        let cache = ArtworkCache(directory: directory, fetch: { try await downloads.fetch($0) })
+        let url = URL(string: "https://example.org/episode.png")!
+        async let first = cache.data(for: url)
+        async let second = cache.data(for: url)
+        let results = try await [first, second]
+        XCTAssertTrue(results == [image, image])
+        let count = await downloads.count
+        XCTAssertTrue(count == 1, "Concurrent requests must share one download")
+        let memory = try await cache.data(for: url)
+        XCTAssertTrue(memory == image)
+        let afterMemory = await downloads.count
+        XCTAssertTrue(afterMemory == 1)
+        let reopened = ArtworkCache(directory: directory) { _ in throw URLError(.notConnectedToInternet) }
+        let disk = try await reopened.data(for: url)
+        XCTAssertTrue(disk == image, "Saved images must load after relaunch while offline")
+        let files = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        XCTAssertTrue(files.count == 1)
+        try Data("corrupt".utf8).write(to: files[0])
+        let repaired = ArtworkCache(directory: directory, fetch: { try await downloads.fetch($0) })
+        let recovered = try await repaired.data(for: url)
+        XCTAssertTrue(recovered == image)
+        let afterRepair = await downloads.count
+        XCTAssertTrue(afterRepair == 2)
+        let invalidDownloads = Downloads(image: Data("not an image".utf8))
+        let invalid = ArtworkCache(directory: directory, fetch: { try await invalidDownloads.fetch($0) })
+        let invalidURL = URL(string: "https://example.org/broken.png")!
+        for _ in 0..<2 {
+            do {
+                _ = try await invalid.data(for: invalidURL)
+                XCTFail("Invalid images must not be cached")
+            } catch let error as URLError {
+                XCTAssertTrue(error.code == .cannotDecodeContentData)
+            }
+        }
+        let failedAttempts = await invalidDownloads.count
+        XCTAssertTrue(failedAttempts == 2, "A failed request must be retryable")
+        let finalFiles = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
+        XCTAssertTrue(finalFiles.count == 1)
+        let small = ArtworkCache.downsample(image, maxPixelSize: 1)
+        XCTAssertTrue(small?.width == 1 && small?.height == 1)
+        try await repaired.clear()
+        XCTAssertTrue(!FileManager.default.fileExists(atPath: directory.path))
+        let afterClear = try await repaired.data(for: url)
+        XCTAssertTrue(afterClear == image)
+        let afterClearCount = await downloads.count
+        XCTAssertTrue(afterClearCount == 3, "Clearing must remove memory and disk entries")
+        print("Artwork cache checks passed: shared requests, memory reuse, offline persistence, corruption recovery, invalid-image rejection and retry")
+    }
+}

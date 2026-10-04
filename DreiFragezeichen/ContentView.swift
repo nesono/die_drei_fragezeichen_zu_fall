@@ -222,6 +222,7 @@ struct ContentView: View {
                 .accessibilityValue("\(listening.favourites.contains(episode.id) ? "Favorit" : "Kein Favorit"), \(listening.listenLater.contains(episode.id) ? "Für später gespeichert" : "Nicht für später gespeichert")")
             }
             Text(episode.titel)
+                .accessibilityIdentifier("selectedEpisodeTitle")
                 .font(.title2.bold())
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(alignment == .leading ? .leading : .center)
@@ -236,6 +237,7 @@ struct ContentView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 36)
             }
+            .accessibilityIdentifier("openPlayer")
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: 14))
 
@@ -269,6 +271,7 @@ struct ContentView: View {
             }
             .disabled(previousEpisodes.isEmpty)
             .accessibilityLabel("Zurück")
+            .accessibilityIdentifier("back")
             .accessibilityHint("Zeigt die vorherige Folge im Verlauf")
 
             Button(action: goForward) {
@@ -276,6 +279,7 @@ struct ContentView: View {
             }
             .disabled(forwardEpisodes.isEmpty)
             .accessibilityLabel("Vorwärts")
+            .accessibilityIdentifier("forward")
             .accessibilityHint("Stellt die nächste Folge im Verlauf wieder her")
 
             Button(action: shuffle) {
@@ -284,6 +288,7 @@ struct ContentView: View {
                     .frame(maxWidth: .infinity, minHeight: 36)
             }
             .disabled(episodes.count < 2)
+            .accessibilityIdentifier("shuffle")
         }
     }
 
@@ -323,6 +328,7 @@ struct ContentView: View {
             }
             .foregroundStyle(.blue)
             .accessibilityHint("Öffnet die vollständige Folgenliste")
+            .accessibilityIdentifier("library")
         }
     }
 
@@ -334,10 +340,20 @@ struct ContentView: View {
                     .frame(minWidth: 32, minHeight: 28)
             }
             .accessibilityLabel("Einstellungen")
+            .accessibilityIdentifier("settings")
         }
     }
 
     @MainActor private func load() async {
+        #if DEBUG
+        if UITestSupport.enabled {
+            episodes = UITestSupport.episodes
+            selected = episodes.first
+            loading = false
+            needsDownload = false
+            return
+        }
+        #endif
         guard !loading else { return }
         loading = true
         errorMessage = nil
