@@ -10,6 +10,7 @@ struct ContentView: View {
     @State private var loading = false
     @State private var errorMessage: String?
     @State private var notice: String?
+    @State private var showingEpisodes = false
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -92,6 +93,12 @@ struct ContentView: View {
             }
         }
         .background(pageColor.ignoresSafeArea())
+        .sheet(isPresented: $showingEpisodes) {
+            EpisodeListView(episodes: episodes, selectedID: selected?.id) { episode in
+                selectEpisode(episode)
+                showingEpisodes = false
+            }
+        }
         .task { if episodes.isEmpty { await load() } }
         .alert("Apple Music", isPresented: Binding(
             get: { notice != nil },
@@ -249,7 +256,13 @@ struct ContentView: View {
     }
 
     @ViewBuilder private var catalogueCount: some View {
-        if !episodes.isEmpty { Text("\(episodes.count) Folgen entdecken") }
+        if !episodes.isEmpty {
+            Button { showingEpisodes = true } label: {
+                Label("Alle Folgen (\(episodes.count))", systemImage: "list.bullet")
+            }
+            .foregroundStyle(.blue)
+            .accessibilityHint("Öffnet die vollständige Folgenliste")
+        }
     }
 
     private var attribution: some View {
@@ -272,8 +285,12 @@ struct ContentView: View {
     }
 
     private func shuffle() {
-        guard let next = episodes.filter({ $0.id != selected?.id }).randomElement() ?? episodes.first,
-              next.id != selected?.id else { return }
+        guard let next = episodes.filter({ $0.id != selected?.id }).randomElement() ?? episodes.first else { return }
+        selectEpisode(next)
+    }
+
+    private func selectEpisode(_ next: Episode) {
+        guard next.id != selected?.id else { return }
         if let selected { previousEpisodes.append(selected) }
         forwardEpisodes.removeAll()
         selected = next
