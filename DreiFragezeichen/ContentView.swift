@@ -11,6 +11,8 @@ struct ContentView: View {
     @State private var errorMessage: String?
     @State private var notice: String?
     @State private var showingEpisodes = false
+    @State private var showingSettings = false
+    @AppStorage("playbackService") private var player: PlaybackService = .appleMusic
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -99,8 +101,9 @@ struct ContentView: View {
                 showingEpisodes = false
             }
         }
+        .sheet(isPresented: $showingSettings) { PlayerSettingsView(player: $player) }
         .task { if episodes.isEmpty { await load() } }
-        .alert("Apple Music", isPresented: Binding(
+        .alert(player.name, isPresented: Binding(
             get: { notice != nil },
             set: { if !$0 { notice = nil } }
         )) {
@@ -177,7 +180,7 @@ struct ContentView: View {
     private func actions(compact: Bool) -> some View {
         VStack(spacing: 12) {
             Button(action: listen) {
-                Label("In Apple Music öffnen", systemImage: "play.fill")
+                Label("In \(player.name) öffnen", systemImage: "play.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 36)
             }
@@ -193,7 +196,7 @@ struct ContentView: View {
 
             AudioOutputPicker()
 
-            Text("Falls nötig, wähle die Ausgabe in Apple Music erneut.")
+            Text("Falls nötig, wähle die Ausgabe in \(player.name) erneut.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
@@ -266,7 +269,14 @@ struct ContentView: View {
     }
 
     private var attribution: some View {
-        Link("dreimetadaten.de", destination: URL(string: "https://dreimetadaten.de/")!)
+        HStack(spacing: 12) {
+            Link("dreimetadaten.de", destination: URL(string: "https://dreimetadaten.de/")!)
+            Button { showingSettings = true } label: {
+                Image(systemName: "gearshape")
+                    .frame(minWidth: 32, minHeight: 28)
+            }
+            .accessibilityLabel("Einstellungen")
+        }
     }
 
     @MainActor private func load() async {
@@ -310,14 +320,18 @@ struct ContentView: View {
 
     private func listen() {
         guard let selected else { return }
-        UIPasteboard.general.string = selected.appleMusicURL?.absoluteString ?? selected.searchText
-        if let url = selected.appleMusicURL {
+        let service = player
+        let albumURL = selected.playbackURL(for: service)
+        UIPasteboard.general.string = albumURL?.absoluteString ?? selected.searchText
+        if let url = albumURL {
             openURL(url) { accepted in
                 if !accepted { notice = "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert." }
             }
         } else {
-            notice = "Für diese Folge gibt es keinen direkten Apple-Music-Link. Der Titel wurde kopiert."
-            openURL(selected.searchURL)
+            notice = "Für diese Folge gibt es keinen direkten \(service.name)-Link. Der Titel wurde kopiert."
+            openURL(selected.searchURL(for: service)) { accepted in
+                if !accepted { notice = "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert." }
+            }
         }
     }
 }

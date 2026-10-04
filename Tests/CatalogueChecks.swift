@@ -16,6 +16,16 @@ struct CatalogueChecks {
         precondition(artwork[0].artworkURL?.absoluteString == "https://a1.mzstatic.com/cover.jpg")
         precondition(artwork[1].artworkURL?.absoluteString == "https://dreimetadaten.de/cover.png")
         precondition(artwork[2].artworkURL == nil)
+        let playerFixture = #"{"serie":[{"nummer":1,"titel":"A / B & Frage?","links":{"spotify":"http://open.spotify.com/intl-de/album/123","appleMusic":"https://music.apple.com/de/album/456"}},{"nummer":2,"titel":"Missing","links":{"spotify":"https://open.spotify.com.evil.test/album/123"}}]}"#
+        let players = try JSONDecoder().decode(Catalogue.self, from: Data(playerFixture.utf8)).serie
+        precondition(players[0].playbackURL(for: .spotify)?.absoluteString == "https://open.spotify.com/intl-de/album/123")
+        precondition(players[0].playbackURL(for: .appleMusic)?.host == "music.apple.com")
+        precondition(players[1].playbackURL(for: .spotify) == nil)
+        precondition(players[1].playbackURL(for: .appleMusic) == nil)
+        let spotifySearch = players[0].searchURL(for: .spotify)
+        precondition(spotifySearch.host == "open.spotify.com")
+        precondition(spotifySearch.query == nil && spotifySearch.fragment == nil)
+        precondition(spotifySearch.path == "/search/" + players[0].searchText)
         if CommandLine.arguments.count > 1 {
             let data = try Data(contentsOf: URL(fileURLWithPath: CommandLine.arguments[1]))
             let live = try JSONDecoder().decode(Catalogue.self, from: data).availableEpisodes()

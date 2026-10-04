@@ -18,7 +18,7 @@ No signing team is needed for the simulator. Apple Music links can open in Safar
 3. Select your Apple development team (a personal Apple ID can be added in Xcode Settings → Accounts). Leave automatic signing enabled. Change `de.local.dreifragezeichen` to a unique bundle identifier if Xcode requests it.
 4. Enable Developer Mode on the iPhone if prompted, then press **⌘R**. Follow any device trust prompts.
 
-The app opens Apple Music links; playback and any subscription requirements are handled by Apple Music.
+Use the gear button beside the metadata credit to open Settings and choose Apple Music or Spotify. Apple Music is the default; your selection persists across launches. The selected service handles playback and any account or subscription requirements.
 
 ## Included behavior
 
@@ -27,9 +27,9 @@ The app opens Apple Music links; playback and any subscription requirements are 
 - Future release dates are excluded. Episodes without a release date remain eligible.
 - **Alle Folgen** opens a scrollable list of all available episodes, ordered by number, with title/number search. Selecting a row returns to the main view and adds the selection to back/forward history. The list uses the loaded catalogue and loads cover thumbnails as rows appear. Thumbnails share the same permanent memory/disk cache as the main episode view.
 - **Nochmal neu** selects another episode without an immediate repeat. **Zurück** and **Vorwärts** navigate suggestion history, including covers and playback links. Drawing a new episode after going back replaces the forward history. On narrow screens the navigation buttons use arrow icons. History is kept for the current app session; the back button is disabled when there is no earlier suggestion.
-- **Ja, in Apple Music öffnen** copies the album link and opens it.
-- If no album link exists, the title is copied and an Apple Music web search opens.
-- Native AirPlay output picker below the episode actions. Tap the full-width “Audioausgabe wählen” button to show available routes. Playback happens in Apple Music, so the destination may need to be selected again in Music or Control Center. The app does not activate an audio session or force another app’s output.
+- **In Apple Music öffnen** / **In Spotify öffnen** copies and opens the selected service’s album link.
+- If no album link exists, the title is copied and a search in the selected service opens.
+- Native AirPlay output picker below the episode actions. Tap the full-width “Audioausgabe wählen” button to show available routes. Playback happens in the selected service, so the destination may need to be selected again there or in Control Center. The app does not activate an audio session or force another app’s output.
 - Loading indicator, network timeout, and a retry button on failure.
 - Dynamic Type, scrollable layout, and accessible button labels.
 
@@ -76,3 +76,5 @@ Run `swiftc DreiFragezeichen/Episode.swift Tests/CacheChecks.swift -o /tmp/drei-
 Viewed covers are validated and saved atomically in Application Support, excluded from backup, with no expiry or periodic revalidation. A bounded 32 MB memory cache speeds up revisits; evicted images remain on disk. The image URL identifies each entry, so a changed catalogue URL can download a new cover. Concurrent requests share a download, which finishes even if you navigate away. Failed responses are not cached; corrupt files are downloaded again. Only viewed covers are fetched. Unviewed covers still require internet, and uninstalling the app removes its saved artwork.
 
 Run `swiftc DreiFragezeichen/ArtworkCache.swift Tests/ArtworkCacheChecks.swift -o /tmp/drei-artwork-checks && /tmp/drei-artwork-checks` to check memory reuse, disk persistence while offline, concurrent requests, corruption recovery, and invalid-image retries.
+
+Spotify uses HTTPS content links as described in [Spotify’s iOS linking guide](https://developer.spotify.com/documentation/ios/tutorials/content-linking); no Spotify SDK or API credentials are needed. Cached catalogue data retains Spotify links, so changing player does not require downloading the catalogue again. Spotify Connect devices are selected within Spotify; the app’s AirPlay picker remains the native iOS route picker. Validate the actual service handoff on a physical device.

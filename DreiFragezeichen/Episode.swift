@@ -1,5 +1,11 @@
 import Foundation
 
+enum PlaybackService: String, CaseIterable, Identifiable {
+    case appleMusic, spotify
+    var id: String { rawValue }
+    var name: String { self == .appleMusic ? "Apple Music" : "Spotify" }
+}
+
 struct Catalogue: Decodable {
     let serie: [Episode]
 
@@ -25,6 +31,7 @@ struct Episode: Decodable, Identifiable {
 
     struct Links: Decodable {
         let appleMusic: String?
+        let spotify: String?
         let cover: String?
         let cover_itunes: String?
         let cover_dreifragezeichen: String?
@@ -46,17 +53,23 @@ struct Episode: Decodable, Identifiable {
     var numberLabel: String { String(format: "%03d", nummer) }
     var searchText: String { "Die drei ??? Folge \(numberLabel) – \(titel)" }
 
-    var appleMusicURL: URL? {
-        guard let value = links?.appleMusic,
-              var components = URLComponents(string: value),
-              let host = components.host?.lowercased(),
-              ["music.apple.com", "itunes.apple.com"].contains(host),
+    var appleMusicURL: URL? { playbackURL(for: .appleMusic) }
+    var searchURL: URL { searchURL(for: .appleMusic) }
+
+    func playbackURL(for service: PlaybackService) -> URL? {
+        let value = service == .appleMusic ? links?.appleMusic : links?.spotify
+        let hosts = service == .appleMusic ? ["music.apple.com", "itunes.apple.com"] : ["open.spotify.com"]
+        guard let value, var components = URLComponents(string: value),
+              let host = components.host?.lowercased(), hosts.contains(host),
               ["http", "https"].contains(components.scheme?.lowercased() ?? "") else { return nil }
         components.scheme = "https"
         return components.url
     }
 
-    var searchURL: URL {
+    func searchURL(for service: PlaybackService) -> URL {
+        if service == .spotify {
+            return URL(string: "https://open.spotify.com/search")!.appendingPathComponent(searchText)
+        }
         var components = URLComponents(string: "https://music.apple.com/de/search")!
         components.queryItems = [URLQueryItem(name: "term", value: searchText)]
         return components.url!
