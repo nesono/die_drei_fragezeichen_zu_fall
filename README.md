@@ -59,7 +59,7 @@ Optionally pass a downloaded `Serie.json` path to `/tmp/drei-checks` to validate
 
 ## App icon
 
-The app icon is included in `DreiFragezeichen/Assets.xcassets/AppIcon.appiconset`. It uses the same white, red, and blue question marks as the main screen. To regenerate the opaque 1024 × 1024 PNG on macOS, run `swift Scripts/GenerateAppIcon.swift` from the project root. iOS applies the rounded corners.
+The app icon is included in `DreiFragezeichen/Assets.xcassets/AppIcon.appiconset`. It shows a dark die with three visible faces: a white question mark on top, red on the left, and blue on the right. The source artwork is saved in `Design/AppIcon-source.png`. To regenerate the opaque 1024 × 1024 PNG on macOS, run `swift Scripts/GenerateAppIcon.swift` from the project root. iOS applies the rounded corners.
 
 To check audio routing, run on a physical iPhone with an available AirPlay speaker: tap the “Audioausgabe wählen” button, choose the speaker, then open the episode in Apple Music and start playback. Confirm the destination in Music; also check the picker with no external devices available. Route discovery and the handoff have not been verified on hardware.
 
