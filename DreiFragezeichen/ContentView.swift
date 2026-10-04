@@ -358,8 +358,8 @@ struct ContentView: View {
 
     private func shuffle() {
         let eligible = Set(listening.eligibleIDs(episodes.map(\.id), pool: suggestionPool))
-        let candidates = episodes.filter { eligible.contains($0.id) && $0.id != selected?.id }
-        guard let next = candidates.randomElement() else {
+        let nextID = listening.nextSuggestionID(from: episodes.map(\.id), pool: suggestionPool, currentID: selected?.id)
+        guard let nextID, let next = episodes.first(where: { $0.id == nextID }) else {
             if selected != nil {
                 notice = eligible.isEmpty
                     ? "Für „\(suggestionPool.title)“ sind keine Folgen verfügbar. Ändere die Zufallsauswahl unter den Schaltflächen."

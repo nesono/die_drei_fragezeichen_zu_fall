@@ -98,3 +98,5 @@ Use the bookmark menu beside the listening status to add/remove **Favoriten** an
 ## Random selection pools
 
 Use the menu below the audio-output button, or Settings → Zufallsauswahl, to choose all episodes, unheard episodes, favourites, listen later, or episodes not heard for 30 days (including unheard episodes). The choice persists across launches and applies to the next shuffle. History and manual list selections remain unrestricted. Empty pools explain the issue instead of silently selecting outside the filter; if the current episode is the sole match, it is retained.
+
+Each random-selection pool now has a separate cycle, saved across launches. It suggests every eligible episode before repeating and avoids immediate repeats when alternatives exist. The current visible episode counts as seen when drawing again. History navigation does not reset cycles; newly eligible episodes join the remaining selection, and ineligible episodes are skipped.

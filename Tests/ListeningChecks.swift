@@ -58,6 +58,37 @@ struct ListeningChecks {
         precondition(afterOpen.favourites.contains(3))
         precondition(!afterOpen.listenLater.contains(3))
         precondition(afterOpen.eligibleIDs(ids, pool: .later, now: now).isEmpty)
+        let cycleSuite = "ShuffleChecks.\(UUID().uuidString)"
+        let cycleDefaults = UserDefaults(suiteName: cycleSuite)!
+        defer { cycleDefaults.removePersistentDomain(forName: cycleSuite) }
+        let cycleIDs = [10, 20, 30, 40, 50]
+        var current: Int?
+        for _ in 0..<20 {
+            var round = Set<Int>()
+            for _ in cycleIDs {
+                // Recreate the store to verify the cycle survives reopening.
+                let cycleStore = ListeningStore(defaults: cycleDefaults)
+                let next = cycleStore.nextSuggestionID(from: cycleIDs, pool: .all, currentID: current)!
+                precondition(next != current, "No immediate repeats at cycle boundaries")
+                precondition(round.insert(next).inserted, "No repeats inside a cycle")
+                current = next
+            }
+            precondition(round == Set(cycleIDs))
+        }
+        let cycleStore = ListeningStore(defaults: cycleDefaults)
+        cycleStore.toggleFavourite(10)
+        cycleStore.toggleFavourite(20)
+        let favouriteFirst = cycleStore.nextSuggestionID(from: cycleIDs, pool: .favourites, currentID: nil)!
+        let favouriteSecond = cycleStore.nextSuggestionID(from: cycleIDs, pool: .favourites, currentID: favouriteFirst)!
+        precondition(Set([favouriteFirst, favouriteSecond]) == [10, 20])
+        precondition(cycleStore.nextSuggestionID(from: [], pool: .all, currentID: nil) == nil)
+        precondition(cycleStore.nextSuggestionID(from: [10], pool: .later, currentID: nil) == nil)
+        precondition(cycleStore.nextSuggestionID(from: [10], pool: .unheard, currentID: 10) == nil)
+        precondition(cycleStore.nextSuggestionID(from: [10], pool: .unheard, currentID: nil) == 10)
+        precondition(cycleStore.nextSuggestionID(from: [10, 20], pool: .unheard, currentID: 10) == 20)
+        precondition(cycleStore.nextSuggestionID(from: [10, 20, 30], pool: .unheard, currentID: 10) == 30,
+                     "Going back must not reset the cycle; newly eligible episodes join it")
+        print("Shuffle-cycle checks passed: 20 complete cycles, relaunch persistence, pool isolation, empty/single pools and changing eligibility")
         print("Suggestion checks passed: all pools, empty pools, player-open removal and persistence")
         print("Collection checks passed: persistence, independent markers, removal, preserved listening status")
         print("Listening checks passed: persistence, independent episodes, date editing, future-date guard, undo")

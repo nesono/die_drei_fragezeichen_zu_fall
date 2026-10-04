@@ -21,11 +21,15 @@ final class ListeningStore: ObservableObject {
     @Published private(set) var dates: [String: Date]
     @Published private(set) var favourites: Set<Int>
     @Published private(set) var listenLater: Set<Int>
+    private var suggested: [String: [Int]]
+    private var lastSuggestions: [String: Int]
     private let defaults: UserDefaults
     private let key = "listeningDates.v1"
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        suggested = defaults.dictionary(forKey: "suggestionCycles.v1") as? [String: [Int]] ?? [:]
+        lastSuggestions = defaults.dictionary(forKey: "lastSuggestions.v1") as? [String: Int] ?? [:]
         dates = (defaults.dictionary(forKey: key) ?? [:]).compactMapValues { $0 as? Date }
         favourites = Set((defaults.array(forKey: "favourites.v1") as? [Int] ?? []).filter { $0 > 0 })
         listenLater = Set((defaults.array(forKey: "listenLater.v1") as? [Int] ?? []).filter { $0 > 0 })
@@ -42,6 +46,33 @@ final class ListeningStore: ObservableObject {
             case .notRecent: lastListened(to: id).map { $0 <= cutoff } ?? true
             }
         }
+    }
+
+    /// Each pool has its own persistent cycle. History navigation does not call this.
+    func nextSuggestionID(from ids: [Int], pool: SuggestionPool, currentID: Int?, now: Date = Date()) -> Int? {
+        let eligible = Set(eligibleIDs(ids, pool: pool, now: now))
+        guard !eligible.isEmpty else { return nil }
+        if eligible.count == 1, eligible.first == currentID { return nil }
+
+        var seen = Set(suggested[pool.rawValue] ?? [])
+        // A manually selected or already visible episode need not be suggested again.
+        if let currentID, eligible.contains(currentID) { seen.insert(currentID) }
+        var remaining = eligible.subtracting(seen)
+        if remaining.isEmpty {
+            seen = []
+            remaining = eligible
+        }
+        // Avoid the boundary repeat, including after relaunch. If there is only
+        // one remaining episode, returning it completes the cycle correctly.
+        let avoid = currentID ?? lastSuggestions[pool.rawValue]
+        let alternatives = remaining.filter { $0 != avoid }
+        guard let next = (alternatives.isEmpty ? remaining : alternatives).randomElement() else { return nil }
+        seen.insert(next)
+        suggested[pool.rawValue] = seen.sorted()
+        lastSuggestions[pool.rawValue] = next
+        defaults.set(suggested, forKey: "suggestionCycles.v1")
+        defaults.set(lastSuggestions, forKey: "lastSuggestions.v1")
+        return next
     }
 
     func recordPlayerOpen(_ episodeID: Int, now: Date = Date()) {
