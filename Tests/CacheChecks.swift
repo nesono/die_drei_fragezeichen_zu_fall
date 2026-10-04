@@ -14,6 +14,11 @@ struct CacheChecks {
             requests += 1
             return original
         }
+        do {
+            _ = try await service.load(now: now, allowNetwork: false)
+            preconditionFailure("First download must require consent")
+        } catch CatalogueError.downloadRequired {}
+        precondition(requests == 0)
         let first = try await service.load(now: now)
         precondition(first.first?.nummer == 1 && requests == 1)
         precondition(FileManager.default.fileExists(atPath: file.path))
@@ -22,6 +27,8 @@ struct CacheChecks {
             requests += 1
             return updated
         }
+        let existing = try await reopened.load(now: now.addingTimeInterval(172_800), allowNetwork: false)
+        precondition(existing.first?.nummer == 1 && requests == 1)
         let fresh = try await reopened.load(now: now.addingTimeInterval(86_399))
         precondition(fresh.first?.nummer == 1 && requests == 1)
         let refreshed = try await reopened.load(now: now.addingTimeInterval(86_400))

@@ -82,10 +82,11 @@ struct Episode: Decodable, Identifiable {
 }
 
 enum CatalogueError: LocalizedError {
-    case badResponse, empty
+    case badResponse, empty, downloadRequired
 
     var errorDescription: String? {
         switch self {
+        case .downloadRequired: "Bitte lade zuerst den Folgenkatalog herunter."
         case .badResponse: "Die Folgen konnten nicht geladen werden. Bitte versuche es erneut."
         case .empty: "Im Katalog wurden keine verfügbaren Folgen gefunden."
         }
@@ -111,10 +112,14 @@ struct EpisodeService {
         self.fetch = fetch
     }
 
-    func load(now: Date = Date()) async throws -> [Episode] {
+    func load(now: Date = Date(), allowNetwork: Bool = true) async throws -> [Episode] {
         let saved = try? JSONDecoder().decode(SavedCatalogue.self, from: Data(contentsOf: cacheURL))
         // Reapply release-date filtering even when reading an older catalogue.
         let cachedEpisodes = saved.flatMap { try? decode($0.data, on: now) }
+        if !allowNetwork {
+            if let cachedEpisodes { return cachedEpisodes }
+            throw CatalogueError.downloadRequired
+        }
         if let saved, let cachedEpisodes,
            (0..<86_400).contains(now.timeIntervalSince(saved.fetchedAt)) {
             return cachedEpisodes

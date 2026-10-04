@@ -66,6 +66,14 @@ struct ArtworkCacheChecks {
         precondition(failedAttempts == 2, "A failed request must be retryable")
         let finalFiles = try FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)
         precondition(finalFiles.count == 1)
+        let small = ArtworkCache.downsample(image, maxPixelSize: 1)
+        precondition(small?.width == 1 && small?.height == 1)
+        try await repaired.clear()
+        precondition(!FileManager.default.fileExists(atPath: directory.path))
+        let afterClear = try await repaired.data(for: url)
+        precondition(afterClear == image)
+        let afterClearCount = await downloads.count
+        precondition(afterClearCount == 3, "Clearing must remove memory and disk entries")
         print("Artwork cache checks passed: shared requests, memory reuse, offline persistence, corruption recovery, invalid-image rejection and retry")
     }
 }

@@ -12,6 +12,8 @@ struct ContentView: View {
     @State private var notice: String?
     @State private var showingEpisodes = false
     @State private var showingSettings = false
+    @State private var needsDownload = false
+    @AppStorage("catalogueDownloadApproved") private var downloadApproved = false
     @AppStorage("playbackService") private var player: PlaybackService = .appleMusic
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -36,7 +38,20 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: tabletLayout ? 28 : (landscape ? 20 : 16)) {
                     if !shortLandscape { header(compact: landscape && !tabletLayout) }
 
-                    if loading {
+                    if needsDownload {
+                        VStack(alignment: .leading, spacing: 16) {
+                            Text("Folgenkatalog laden").font(.title2.bold())
+                            Text("Einmaliger Download: ca. 2 MB (kann mit neuen Folgen wachsen). Danach wird der Katalog lokal gespeichert und frühestens nach 24 Stunden aktualisiert. Cover werden beim Ansehen separat geladen und gespeichert; ihre Größe variiert.")
+                                .foregroundStyle(.secondary)
+                            Button("Katalog herunterladen") {
+                                downloadApproved = true
+                                needsDownload = false
+                                Task { await load() }
+                            }
+                            .buttonStyle(.borderedProminent)
+                            Button("Datenschutz & Einstellungen") { showingSettings = true }
+                        }
+                    } else if loading {
                         ProgressView("Folgen werden geladen …")
                             .frame(maxWidth: .infinity, minHeight: 180)
                     } else if let selected {
@@ -285,8 +300,12 @@ struct ContentView: View {
         errorMessage = nil
         defer { loading = false }
         do {
-            episodes = try await EpisodeService().load()
+            episodes = try await EpisodeService().load(allowNetwork: downloadApproved)
+            downloadApproved = true // Existing installations may already have a catalogue.
+            needsDownload = false
             shuffle()
+        } catch CatalogueError.downloadRequired {
+            needsDownload = true
         } catch is CancellationError {
             // SwiftUI cancels the request when this view disappears.
         } catch {

@@ -33,7 +33,7 @@ Use the gear button beside the metadata credit to open Settings and choose Apple
 - Loading indicator, network timeout, and a retry button on failure.
 - Dynamic Type, scrollable layout, and accessible button labels.
 
-The original Python script is preserved at the project root. This is a personal prototype: it has no App Store packaging. The first launch needs internet to populate the catalogue cache. Viewed artwork is cached separately for offline use; Apple Music manages audio playback and downloads. Metadata comes from dreimetadaten.de; no audio is bundled.
+The original Python script is preserved at the project root. This is a personal prototype: it has no App Store packaging. The first launch explains the approximate catalogue download size and requires a tap to start. Internet is needed to populate the catalogue cache. Viewed artwork is cached separately for offline use; Apple Music manages audio playback and downloads. Metadata comes from dreimetadaten.de; no audio is bundled.
 
 ## Validation
 
@@ -73,8 +73,14 @@ Run `swiftc DreiFragezeichen/Episode.swift Tests/CacheChecks.swift -o /tmp/drei-
 
 ## Artwork cache
 
-Viewed covers are validated and saved atomically in Application Support, excluded from backup, with no expiry or periodic revalidation. A bounded 32 MB memory cache speeds up revisits; evicted images remain on disk. The image URL identifies each entry, so a changed catalogue URL can download a new cover. Concurrent requests share a download, which finishes even if you navigate away. Failed responses are not cached; corrupt files are downloaded again. Only viewed covers are fetched. Unviewed covers still require internet, and uninstalling the app removes its saved artwork.
+Viewed covers are validated and saved atomically in Application Support, excluded from backup, with no expiry or periodic revalidation. Settings includes a cover-cache deletion button. A bounded 32 MB memory cache speeds up revisits; evicted images remain on disk. The image URL identifies each entry, so a changed catalogue URL can download a new cover. Concurrent requests share a download, which finishes even if you navigate away. Failed responses are not cached; corrupt files are downloaded again. Only viewed covers are fetched. Unviewed covers still require internet, and uninstalling the app removes its saved artwork.
+
+Images are downsampled for display so list thumbnails do not retain full-resolution decoded covers.
 
 Run `swiftc DreiFragezeichen/ArtworkCache.swift Tests/ArtworkCacheChecks.swift -o /tmp/drei-artwork-checks && /tmp/drei-artwork-checks` to check memory reuse, disk persistence while offline, concurrent requests, corruption recovery, and invalid-image retries.
 
 Spotify uses HTTPS content links as described in [Spotify’s iOS linking guide](https://developer.spotify.com/documentation/ios/tutorials/content-linking); no Spotify SDK or API credentials are needed. Cached catalogue data retains Spotify links, so changing player does not require downloading the catalogue again. Spotify Connect devices are selected within Spotify; the app’s AirPlay picker remains the native iOS route picker. Validate the actual service handoff on a physical device.
+
+## App Store preparation
+
+See [the submission checklist](Docs/APP_STORE_CHECKLIST.md) for completed work and owner-only tasks. Settings includes offline-readable privacy information and source credits. A public policy URL, operator/contact information, content permissions, and final store metadata still need to be supplied.

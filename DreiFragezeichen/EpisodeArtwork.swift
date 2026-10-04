@@ -39,10 +39,10 @@ struct EpisodeArtwork: View {
                 return
             }
             do {
-                let data = try await ArtworkCache.shared.data(for: url)
+                let image = try await ArtworkCache.shared.image(for: url, maxPixelSize: thumbnail ? 168 : 1140)
                 // A completed request may belong to a view already navigated away from.
                 guard !Task.isCancelled else { return }
-                artwork = UIImage(data: data)
+                artwork = UIImage(cgImage: image)
             } catch {
                 guard !Task.isCancelled else { return }
             }
