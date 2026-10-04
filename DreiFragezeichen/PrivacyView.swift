@@ -4,7 +4,7 @@ struct PrivacyView: View {
     var body: some View {
         List {
             Section("Auf deinem Gerät") {
-                Text("Die App speichert den gewählten Player und die Bestätigung zum Katalogdownload in ihren Einstellungen. Folgenkatalog und angesehene Cover werden lokal gespeichert. Der Auswahlverlauf bleibt nur während der aktuellen App-Sitzung erhalten.")
+                Text("Die App speichert den gewählten Player und die Bestätigung zum Katalogdownload in ihren Einstellungen. Folgenkatalog und angesehene Cover werden lokal gespeichert. Der Auswahlverlauf bleibt nur während der aktuellen App-Sitzung erhalten. Automatisch beim erfolgreichen Öffnen im gewählten Dienst oder manuell gesetzter Hörstatus und das Datum „Zuletzt gehört“ werden dauerhaft auf deinem Gerät gespeichert. Du kannst sie pro Folge ändern oder entfernen. Diese persönlichen Einstellungen können Teil deines Gerätebackups sein; sie werden nicht von der App an einen Server übertragen.")
                 Text("Cover bleiben gespeichert, bis du sie in den Einstellungen löschst oder die App entfernst. Angezeigte Bilder können bis zum Schließen der Ansicht im Arbeitsspeicher bleiben. Beim erneuten Ansehen werden gelöschte Cover wieder geladen. Die heruntergeladenen Dateien werden von der App von Gerätebackups ausgeschlossen.")
             }
             Section("Internetverbindungen") {

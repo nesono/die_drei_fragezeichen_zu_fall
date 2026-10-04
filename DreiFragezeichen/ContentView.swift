@@ -2,6 +2,8 @@ import SwiftUI
 import UIKit
 
 struct ContentView: View {
+    @EnvironmentObject private var listening: ListeningStore
+    @State private var editingListening: Episode?
     @Environment(\.openURL) private var openURL
     @State private var episodes: [Episode] = []
     @State private var selected: Episode?
@@ -33,7 +35,7 @@ struct ContentView: View {
             let shortLandscape = landscape && geometry.size.height < 500
             // Reserve space for the header, title and full-sized controls first.
             // Shorter phones give up artwork size rather than touch-target size.
-            let portraitArtworkSize = min(260, max(120, geometry.size.height - 510))
+            let portraitArtworkSize = min(260, max(120, geometry.size.height - 538))
             ScrollView {
                 VStack(alignment: .leading, spacing: tabletLayout ? 28 : (landscape ? 20 : 16)) {
                     if !shortLandscape { header(compact: landscape && !tabletLayout) }
@@ -116,6 +118,7 @@ struct ContentView: View {
                 showingEpisodes = false
             }
         }
+        .sheet(item: $editingListening) { ListeningStatusView(episode: $0) }
         .sheet(isPresented: $showingSettings) { PlayerSettingsView(player: $player) }
         .task { if episodes.isEmpty { await load() } }
         .alert(player.name, isPresented: Binding(
@@ -180,10 +183,22 @@ struct ContentView: View {
 
     private func episodeDetails(_ episode: Episode, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 10) {
-            Text("FOLGE \(episode.numberLabel)")
-                .font(.caption.monospaced().weight(.bold))
-                .tracking(2)
-                .foregroundStyle(.blue)
+            HStack {
+                Text("FOLGE \(episode.numberLabel)")
+                    .font(.caption.monospaced().weight(.bold))
+                    .tracking(2)
+                    .foregroundStyle(.blue)
+                Spacer(minLength: 8)
+                Button { editingListening = episode } label: {
+                    Label(listening.lastListened(to: episode.id) == nil ? "Ungehört" : "Gehört",
+                          systemImage: listening.lastListened(to: episode.id) == nil ? "circle" : "checkmark.circle.fill")
+                        .font(.caption.weight(.semibold))
+                        .frame(minHeight: 44)
+                }
+                .foregroundStyle(listening.lastListened(to: episode.id) == nil ? Color.secondary : Color.green)
+                .accessibilityHint("Hörstatus und Datum bearbeiten")
+                .accessibilityValue(listening.lastListened(to: episode.id)?.formatted(date: .abbreviated, time: .omitted) ?? "Noch nicht als gehört markiert")
+            }
             Text(episode.titel)
                 .font(.title2.bold())
                 .fixedSize(horizontal: false, vertical: true)
@@ -344,17 +359,25 @@ struct ContentView: View {
         UIPasteboard.general.string = albumURL?.absoluteString ?? selected.searchText
         if let url = albumURL {
             openURL(url) { accepted in
-                if !accepted { notice = "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert." }
+                if accepted {
+                    listening.markHeard(selected.id)
+                } else {
+                    notice = "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert."
+                }
             }
         } else {
             notice = "Für diese Folge gibt es keinen direkten \(service.name)-Link. Der Titel wurde kopiert."
             openURL(selected.searchURL(for: service)) { accepted in
-                if !accepted { notice = "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert." }
+                if accepted {
+                    listening.markHeard(selected.id)
+                } else {
+                    notice = "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert."
+                }
             }
         }
     }
 }
 
 struct ContentView_Previews: PreviewProvider {
-    static var previews: some View { ContentView().preferredColorScheme(.dark) }
+    static var previews: some View { ContentView().environmentObject(ListeningStore()).preferredColorScheme(.dark) }
 }

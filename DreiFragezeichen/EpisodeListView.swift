@@ -5,6 +5,8 @@ struct EpisodeListView: View {
     let selectedID: Int?
     let onSelect: (Episode) -> Void
 
+    @EnvironmentObject private var listening: ListeningStore
+    @State private var editingListening: Episode?
     @Environment(\.dismiss) private var dismiss
     @State private var search = ""
     @State private var positionedInitialSelection = false
@@ -35,6 +37,11 @@ struct EpisodeListView: View {
                                         Text(episode.titel)
                                             .foregroundStyle(.primary)
                                             .fixedSize(horizontal: false, vertical: true)
+                                        if let date = listening.lastListened(to: episode.id) {
+                                            Label("Gehört · \(date.formatted(date: .abbreviated, time: .omitted))", systemImage: "checkmark.circle")
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     if episode.id == selectedID {
@@ -45,9 +52,17 @@ struct EpisodeListView: View {
                                 .padding(.vertical, 8)
                                 .contentShape(Rectangle())
                             }
+                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                Button("Hörstatus", systemImage: "checkmark.circle") { editingListening = episode }
+                                    .tint(.blue)
+                            }
+                            .contextMenu {
+                                Button("Hörstatus bearbeiten", systemImage: "checkmark.circle") { editingListening = episode }
+                            }
                             .id(episode.id)
                             .buttonStyle(.plain)
                             .accessibilityLabel("Folge \(episode.numberLabel): \(episode.titel)")
+                            .accessibilityValue(listening.lastListened(to: episode.id).map { "Gehört am \($0.formatted(date: .abbreviated, time: .omitted))" } ?? "Ungehört")
                             .accessibilityAddTraits(episode.id == selectedID ? .isSelected : [])
                         }
                     } header: {
@@ -71,6 +86,7 @@ struct EpisodeListView: View {
                     positionedInitialSelection = true
                 }
             }
+            .sheet(item: $editingListening) { ListeningStatusView(episode: $0) }
             .navigationTitle("Alle Folgen")
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $search, prompt: "Titel oder Folgennummer")

@@ -84,3 +84,9 @@ Spotify uses HTTPS content links as described in [Spotify’s iOS linking guide]
 ## App Store preparation
 
 See [the submission checklist](Docs/APP_STORE_CHECKLIST.md) for completed work and owner-only tasks. Settings includes offline-readable privacy information and source credits. A public policy URL, operator/contact information, content permissions, and final store metadata still need to be supplied.
+
+## Listening status
+
+Tap **Ungehört/Gehört** beside the episode number to edit its last-listened date and save it as heard. **Als ungehört markieren** removes the record. In **Alle Folgen**, heard episodes show their date; swipe a row or use its context menu to edit the status. Successfully opening an album link or its search fallback marks the episode as heard today (an assumption, not playback verification). Failed opens leave the record unchanged. Dates can be corrected manually and cannot be set in the future. Records persist locally in app preferences, independently of catalogue/artwork caches. Device backups may include these personal records; there is no cross-device synchronization.
+
+Run `swiftc DreiFragezeichen/ListeningStore.swift Tests/ListeningChecks.swift -o /tmp/drei-listening-checks && /tmp/drei-listening-checks` to verify persistence, date correction, and undo.
