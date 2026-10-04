@@ -25,13 +25,18 @@ struct EpisodeListView: View {
                         ForEach(visibleEpisodes) { episode in
                             Button { onSelect(episode) } label: {
                                 HStack(spacing: 16) {
-                                    Text(episode.numberLabel)
-                                        .font(.subheadline.monospacedDigit().weight(.semibold))
-                                        .foregroundStyle(.blue)
-                                    Text(episode.titel)
-                                        .foregroundStyle(.primary)
-                                        .fixedSize(horizontal: false, vertical: true)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    EpisodeArtwork(episode: episode, thumbnail: true)
+                                        .frame(width: 56, height: 56)
+                                        .accessibilityHidden(true)
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("FOLGE \(episode.numberLabel)")
+                                            .font(.caption.monospacedDigit().weight(.semibold))
+                                            .foregroundStyle(.blue)
+                                        Text(episode.titel)
+                                            .foregroundStyle(.primary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
                                     if episode.id == selectedID {
                                         Image(systemName: "checkmark.circle.fill")
                                             .foregroundStyle(.blue)
