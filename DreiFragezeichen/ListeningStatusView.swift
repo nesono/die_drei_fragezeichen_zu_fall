@@ -16,7 +16,7 @@ struct ListeningStatusView: View {
                         .datePickerStyle(.compact)
                     Button("Heute gehört") { date = Date() }
                 } footer: {
-                    Text("Beim erfolgreichen Öffnen im gewählten Dienst (auch einer Suche) markieren wir die Folge als heute gehört. Das ist eine Annahme, keine Wiedergabeprüfung. Du kannst Datum und Status hier korrigieren.")
+                    Text("Beim erfolgreichen Öffnen im gewählten Dienst (auch einer Suche) markieren wir die Folge als heute gehört. Dabei wird sie aus „Später hören“ entfernt; Favoriten bleiben erhalten. Das ist eine Annahme, keine Wiedergabeprüfung. Du kannst Datum und Status hier korrigieren.")
                 }
                 if listening.lastListened(to: episode.id) != nil {
                     Section {

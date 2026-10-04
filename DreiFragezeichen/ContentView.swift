@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var showingSettings = false
     @State private var needsDownload = false
     @AppStorage("catalogueDownloadApproved") private var downloadApproved = false
+    @AppStorage("suggestionPool") private var suggestionPool: SuggestionPool = .all
     @AppStorage("playbackService") private var player: PlaybackService = .appleMusic
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -96,6 +97,16 @@ struct ContentView: View {
                         }
                     }
 
+                    if !loading && !episodes.isEmpty && selected == nil {
+                        ContentUnavailableView("Keine passende Folge", systemImage: "line.3.horizontal.decrease.circle",
+                            description: Text("Für „\(suggestionPool.title)“ sind noch keine Folgen verfügbar."))
+                        Button("Aus allen Folgen wählen") {
+                            suggestionPool = .all
+                            shuffle()
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+
                     if let errorMessage {
                         Text(errorMessage)
                             .foregroundStyle(.secondary)
@@ -121,7 +132,7 @@ struct ContentView: View {
         .sheet(item: $editingListening) { ListeningStatusView(episode: $0) }
         .sheet(isPresented: $showingSettings) { PlayerSettingsView(player: $player) }
         .task { if episodes.isEmpty { await load() } }
-        .alert(player.name, isPresented: Binding(
+        .alert("??? Zu-Fall", isPresented: Binding(
             get: { notice != nil },
             set: { if !$0 { notice = nil } }
         )) {
@@ -198,6 +209,17 @@ struct ContentView: View {
                 .foregroundStyle(listening.lastListened(to: episode.id) == nil ? Color.secondary : Color.green)
                 .accessibilityHint("Hörstatus und Datum bearbeiten")
                 .accessibilityValue(listening.lastListened(to: episode.id)?.formatted(date: .abbreviated, time: .omitted) ?? "Noch nicht als gehört markiert")
+                Menu {
+                    EpisodeCollectionActions(episodeID: episode.id)
+                } label: {
+                    CollectionStatusIcon(
+                        favourite: listening.favourites.contains(episode.id),
+                        later: listening.listenLater.contains(episode.id)
+                    )
+                    .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel("Favoriten und Später hören")
+                .accessibilityValue("\(listening.favourites.contains(episode.id) ? "Favorit" : "Kein Favorit"), \(listening.listenLater.contains(episode.id) ? "Für später gespeichert" : "Nicht für später gespeichert")")
             }
             Text(episode.titel)
                 .font(.title2.bold())
@@ -226,11 +248,17 @@ struct ContentView: View {
 
             AudioOutputPicker()
 
-            Text("Falls nötig, wähle die Ausgabe in \(player.name) erneut.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
-                .multilineTextAlignment(compact ? .leading : .center)
+            Menu {
+                Picker("Zufallsauswahl", selection: $suggestionPool) {
+                    ForEach(SuggestionPool.allCases) { Text($0.title).tag($0) }
+                }
+            } label: {
+                Label(suggestionPool.title, systemImage: "line.3.horizontal.decrease.circle")
+                    .font(.caption)
+                    .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
+            }
+            .accessibilityLabel("Zufallsauswahl: \(suggestionPool.title)")
+            .accessibilityHint("Bestimmt die Auswahl für Nochmal neu")
         }
     }
 
@@ -329,7 +357,16 @@ struct ContentView: View {
     }
 
     private func shuffle() {
-        guard let next = episodes.filter({ $0.id != selected?.id }).randomElement() ?? episodes.first else { return }
+        let eligible = Set(listening.eligibleIDs(episodes.map(\.id), pool: suggestionPool))
+        let candidates = episodes.filter { eligible.contains($0.id) && $0.id != selected?.id }
+        guard let next = candidates.randomElement() else {
+            if selected != nil {
+                notice = eligible.isEmpty
+                    ? "Für „\(suggestionPool.title)“ sind keine Folgen verfügbar. Ändere die Zufallsauswahl unter den Schaltflächen."
+                    : "Die aktuelle Folge ist die einzige passende Folge. Ändere die Zufallsauswahl, um eine andere zu finden."
+            }
+            return
+        }
         selectEpisode(next)
     }
 
@@ -360,7 +397,7 @@ struct ContentView: View {
         if let url = albumURL {
             openURL(url) { accepted in
                 if accepted {
-                    listening.markHeard(selected.id)
+                    listening.recordPlayerOpen(selected.id)
                 } else {
                     notice = "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert."
                 }
@@ -369,7 +406,7 @@ struct ContentView: View {
             notice = "Für diese Folge gibt es keinen direkten \(service.name)-Link. Der Titel wurde kopiert."
             openURL(selected.searchURL(for: service)) { accepted in
                 if accepted {
-                    listening.markHeard(selected.id)
+                    listening.recordPlayerOpen(selected.id)
                 } else {
                     notice = "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert."
                 }

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct PlayerSettingsView: View {
+    @AppStorage("suggestionPool") private var suggestionPool: SuggestionPool = .all
     @Binding var player: PlaybackService
     @State private var confirmClear = false
     @State private var clearing = false
@@ -22,6 +23,15 @@ struct PlayerSettingsView: View {
                     Text("Wiedergabe")
                 } footer: {
                     Text("Deine Auswahl wird gespeichert. Folgen werden im gewählten Dienst geöffnet. Die Wiedergabe und Geräteauswahl steuerst du dort. Wenn ein direkter Link fehlt, öffnen wir die Suche und kopieren den Folgentitel.")
+                }
+                Section {
+                    Picker("Auswahl", selection: $suggestionPool) {
+                        ForEach(SuggestionPool.allCases) { Text($0.title).tag($0) }
+                    }
+                } header: {
+                    Text("Zufallsauswahl")
+                } footer: {
+                    Text("Gilt für den nächsten Zufallsvorschlag. Die aktuelle Folge, der Verlauf und die Folgenliste bleiben verfügbar. Eine leere Auswahl wird nicht automatisch durch andere Folgen ersetzt.")
                 }
                 Section("Speicher") {
                     Button("Cover-Cache löschen", role: .destructive) { confirmClear = true }
