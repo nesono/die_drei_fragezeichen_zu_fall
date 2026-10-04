@@ -5,6 +5,8 @@ struct ContentView: View {
     @Environment(\.openURL) private var openURL
     @State private var episodes: [Episode] = []
     @State private var selected: Episode?
+    @State private var previousEpisodes: [Episode] = []
+    @State private var forwardEpisodes: [Episode] = []
     @State private var loading = false
     @State private var errorMessage: String?
     @State private var notice: String?
@@ -175,13 +177,12 @@ struct ContentView: View {
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.roundedRectangle(radius: 14))
 
-            Button(action: shuffle) {
-                Label("Nochmal neu", systemImage: "shuffle")
-                    .frame(maxWidth: .infinity, minHeight: 36)
+            ViewThatFits(in: .horizontal) {
+                historyControls(showLabels: true)
+                historyControls(showLabels: false)
             }
             .buttonStyle(.bordered)
             .buttonBorderShape(.roundedRectangle(radius: 14))
-            .disabled(episodes.count < 2)
 
             AudioOutputPicker()
 
@@ -191,6 +192,44 @@ struct ContentView: View {
                 .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
                 .multilineTextAlignment(compact ? .leading : .center)
         }
+    }
+
+    private func historyControls(showLabels: Bool) -> some View {
+        HStack(spacing: 8) {
+            Button(action: goBack) {
+                navigationLabel("Zurück", symbol: "chevron.left", showText: showLabels)
+            }
+            .disabled(previousEpisodes.isEmpty)
+            .accessibilityLabel("Zurück")
+            .accessibilityHint("Zeigt die vorherige Folge im Verlauf")
+
+            Button(action: goForward) {
+                navigationLabel("Vorwärts", symbol: "chevron.right", showText: showLabels)
+            }
+            .disabled(forwardEpisodes.isEmpty)
+            .accessibilityLabel("Vorwärts")
+            .accessibilityHint("Stellt die nächste Folge im Verlauf wieder her")
+
+            Button(action: shuffle) {
+                Label("Nochmal neu", systemImage: "shuffle")
+                    .fixedSize(horizontal: true, vertical: false)
+                    .frame(maxWidth: .infinity, minHeight: 36)
+            }
+            .disabled(episodes.count < 2)
+        }
+    }
+
+    private func navigationLabel(_ title: String, symbol: String, showText: Bool) -> some View {
+        Group {
+            if showText {
+                Label(title, systemImage: symbol)
+                    .fixedSize(horizontal: true, vertical: false)
+            } else {
+                Image(systemName: symbol)
+                    .frame(minWidth: 24)
+            }
+        }
+        .frame(minHeight: 36)
     }
 
     private var footer: some View {
@@ -233,7 +272,23 @@ struct ContentView: View {
     }
 
     private func shuffle() {
-        selected = episodes.filter { $0.id != selected?.id }.randomElement() ?? episodes.first
+        guard let next = episodes.filter({ $0.id != selected?.id }).randomElement() ?? episodes.first,
+              next.id != selected?.id else { return }
+        if let selected { previousEpisodes.append(selected) }
+        forwardEpisodes.removeAll()
+        selected = next
+    }
+
+    private func goBack() {
+        guard let previous = previousEpisodes.popLast() else { return }
+        if let selected { forwardEpisodes.append(selected) }
+        selected = previous
+    }
+
+    private func goForward() {
+        guard let next = forwardEpisodes.popLast() else { return }
+        if let selected { previousEpisodes.append(selected) }
+        selected = next
     }
 
     private func listen() {

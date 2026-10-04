@@ -25,7 +25,7 @@ The app opens Apple Music links; playback and any subscription requirements are 
 - German SwiftUI interface for iPhone and iPad. Landscape uses artwork and controls in two columns, with a compact header; portrait and accessibility text sizes use a scrollable single column. Layout follows the available window size, including iPad split-screen.
 - Random selection from the published episode catalogue at https://dreimetadaten.de/data/Serie.json, loaded once per app session.
 - Future release dates are excluded. Episodes without a release date remain eligible.
-- **Nochmal neu** selects another episode without an immediate repeat.
+- **Nochmal neu** selects another episode without an immediate repeat. **Zurück** and **Vorwärts** navigate suggestion history, including covers and playback links. Drawing a new episode after going back replaces the forward history. On narrow screens the navigation buttons use arrow icons. History is kept for the current app session; the back button is disabled when there is no earlier suggestion.
 - **Ja, in Apple Music öffnen** copies the album link and opens it.
 - If no album link exists, the title is copied and an Apple Music web search opens.
 - Native AirPlay output picker below the episode actions. Tap the full-width “Audioausgabe wählen” button to show available routes. Playback happens in Apple Music, so the destination may need to be selected again in Music or Control Center. The app does not activate an audio session or force another app’s output.
