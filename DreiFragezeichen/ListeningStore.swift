@@ -15,6 +15,14 @@ enum SuggestionPool: String, CaseIterable, Identifiable {
     }
 }
 
+enum LibraryFilter: String, CaseIterable {
+    case all = "Alle Folgen"
+    case unheard = "Ungehört"
+    case heard = "Gehört"
+    case favourites = "Favoriten"
+    case later = "Später hören"
+}
+
 /// Listening records are personal data, separate from disposable caches.
 @MainActor
 final class ListeningStore: ObservableObject {
@@ -33,6 +41,18 @@ final class ListeningStore: ObservableObject {
         dates = (defaults.dictionary(forKey: key) ?? [:]).compactMapValues { $0 as? Date }
         favourites = Set((defaults.array(forKey: "favourites.v1") as? [Int] ?? []).filter { $0 > 0 })
         listenLater = Set((defaults.array(forKey: "listenLater.v1") as? [Int] ?? []).filter { $0 > 0 })
+    }
+
+    func libraryIDs(_ ids: [Int], filter: LibraryFilter) -> [Int] {
+        ids.filter { id in
+            switch filter {
+            case .all: true
+            case .heard: lastListened(to: id) != nil
+            case .unheard: lastListened(to: id) == nil
+            case .favourites: favourites.contains(id)
+            case .later: listenLater.contains(id)
+            }
+        }
     }
 
     func eligibleIDs(_ ids: [Int], pool: SuggestionPool, now: Date = Date()) -> [Int] {

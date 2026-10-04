@@ -8,26 +8,31 @@ struct EpisodeListView: View {
     @EnvironmentObject private var listening: ListeningStore
     @State private var editingListening: Episode?
     @Environment(\.dismiss) private var dismiss
-    private enum Collection: String, CaseIterable {
-        case all = "Alle Folgen", favourites = "Favoriten", later = "Später hören"
-    }
-    @State private var collection: Collection = .all
+    @State private var collection: LibraryFilter = .all
     @State private var search = ""
     @State private var positionedInitialSelection = false
 
     private var visibleEpisodes: [Episode] {
         let query = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchingIDs = Set(listening.libraryIDs(episodes.map(\.id), filter: collection))
         return episodes
-            .filter { episode in
-                switch collection {
-                case .all: true
-                case .favourites: listening.favourites.contains(episode.id)
-                case .later: listening.listenLater.contains(episode.id)
-                }
-            }
+            .filter { matchingIDs.contains($0.id) }
             .filter { query.isEmpty || $0.titel.localizedStandardContains(query)
                 || $0.numberLabel.contains(query) }
             .sorted { $0.nummer < $1.nummer }
+    }
+
+    private var emptyMessage: String {
+        if !search.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return "Keine Treffer in „\(collection.rawValue)“. Ändere den Suchtext oder den Filter."
+        }
+        switch collection {
+        case .all: return "Es sind noch keine Folgen verfügbar."
+        case .heard: return "Noch keine Folge als gehört markiert. Öffne eine Folge im Player oder bearbeite ihren Hörstatus."
+        case .unheard: return "Du hast alle verfügbaren Folgen als gehört markiert. Über den Filter kannst du wieder alle anzeigen."
+        case .favourites: return "Füge Folgen über das Lesezeichen-Menü oder durch Wischen zu deinen Favoriten hinzu."
+        case .later: return "Speichere Folgen über das Lesezeichen-Menü oder durch Wischen für später."
+        }
     }
 
     var body: some View {
@@ -101,7 +106,7 @@ struct EpisodeListView: View {
                 .overlay {
                     if visibleEpisodes.isEmpty {
                         ContentUnavailableView("Keine Folgen gefunden", systemImage: "magnifyingglass",
-                            description: Text(collection == .all ? "Suche nach einem Titel oder einer Folgennummer." : "Speichere Folgen über das Lesezeichen-Menü oder durch Wischen in der Folgenliste. Prüfe auch deinen Suchtext."))
+                            description: Text(emptyMessage))
                     }
                 }
                 .task {
@@ -122,11 +127,11 @@ struct EpisodeListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
-                        Picker("Sammlung", selection: $collection) {
-                            ForEach(Collection.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                        Picker("Folgen filtern", selection: $collection) {
+                            ForEach(LibraryFilter.allCases, id: \.self) { Text($0.rawValue).tag($0) }
                         }
                     } label: {
-                        Label("Sammlung", systemImage: "line.3.horizontal.decrease.circle")
+                        Label("Folgen filtern", systemImage: "line.3.horizontal.decrease.circle")
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {

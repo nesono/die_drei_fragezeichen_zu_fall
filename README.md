@@ -93,10 +93,12 @@ Run `swiftc DreiFragezeichen/ListeningStore.swift Tests/ListeningChecks.swift -o
 
 ## Favourites and listen later
 
-Use the bookmark menu beside the listening status to add/remove **Favoriten** and **Später hören** independently. In the episode list, swipe right or use the context menu to change these markers. The collection menu at the top switches between all episodes, favourites, and listen later; search applies to the selected collection. Records persist locally across launches and are separate from disposable caches. Successfully opening an episode in the player (or search fallback) removes it from “Später hören” and marks it heard today, while preserving favourites. Manual status/date edits do not change either collection.
+Use the bookmark menu beside the listening status to add/remove **Favoriten** and **Später hören** independently. In the episode list, swipe right or use the context menu to change these markers. The collection menu at the top switches between all episodes, heard, unheard, favourites, and listen later; search applies to the selected collection. Records persist locally across launches and are separate from disposable caches. Successfully opening an episode in the player (or search fallback) removes it from “Später hören” and marks it heard today, while preserving favourites. Manual status/date edits do not change either collection.
 
 ## Random selection pools
 
 Use the menu below the audio-output button, or Settings → Zufallsauswahl, to choose all episodes, unheard episodes, favourites, listen later, or episodes not heard for 30 days (including unheard episodes). The choice persists across launches and applies to the next shuffle. History and manual list selections remain unrestricted. Empty pools explain the issue instead of silently selecting outside the filter; if the current episode is the sole match, it is retained.
 
 Each random-selection pool now has a separate cycle, saved across launches. It suggests every eligible episode before repeating and avoids immediate repeats when alternatives exist. The current visible episode counts as seen when drawing again. History navigation does not reset cycles; newly eligible episodes join the remaining selection, and ineligible episodes are skipped.
+
+The library filter affects browsing only, not the saved random-selection pool. Title/number search works within each filter. Changing an episode’s heard status or saved markers updates the visible collection immediately. Each empty collection explains how to populate it or change the filter.

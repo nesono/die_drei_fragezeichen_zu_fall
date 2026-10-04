@@ -89,6 +89,17 @@ struct ListeningChecks {
         precondition(cycleStore.nextSuggestionID(from: [10, 20, 30], pool: .unheard, currentID: 10) == 30,
                      "Going back must not reset the cycle; newly eligible episodes join it")
         print("Shuffle-cycle checks passed: 20 complete cycles, relaunch persistence, pool isolation, empty/single pools and changing eligibility")
+        let libraryIDs = [1, 2, 3, 4, 5]
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .all) == libraryIDs)
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .heard) == [1, 2, 3, 4])
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .unheard) == [5])
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .favourites) == [2, 3])
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .later).isEmpty)
+        afterOpen.markUnheard(3)
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .heard) == [1, 2, 4])
+        precondition(afterOpen.libraryIDs(libraryIDs, filter: .unheard) == [3, 5])
+        precondition(afterOpen.libraryIDs([], filter: .heard).isEmpty)
+        print("Library checks passed: all filters, empty collections, changes to heard status")
         print("Suggestion checks passed: all pools, empty pools, player-open removal and persistence")
         print("Collection checks passed: persistence, independent markers, removal, preserved listening status")
         print("Listening checks passed: persistence, independent episodes, date editing, future-date guard, undo")
