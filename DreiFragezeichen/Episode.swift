@@ -80,15 +80,76 @@ enum CatalogueError: LocalizedError {
 }
 
 struct EpisodeService {
-    func load() async throws -> [Episode] {
+    private struct SavedCatalogue: Codable {
+        let fetchedAt: Date
+        let data: Data
+    }
+
+    let cacheURL: URL
+    let fetch: () async throws -> Data
+
+    init(
+        cacheURL: URL = URL.applicationSupportDirectory
+            .appendingPathComponent("EpisodeCatalogue", isDirectory: true)
+            .appendingPathComponent("catalogue-v1.json"),
+        fetch: @escaping () async throws -> Data = EpisodeService.download
+    ) {
+        self.cacheURL = cacheURL
+        self.fetch = fetch
+    }
+
+    func load(now: Date = Date()) async throws -> [Episode] {
+        let saved = try? JSONDecoder().decode(SavedCatalogue.self, from: Data(contentsOf: cacheURL))
+        // Reapply release-date filtering even when reading an older catalogue.
+        let cachedEpisodes = saved.flatMap { try? decode($0.data, on: now) }
+        if let saved, let cachedEpisodes,
+           (0..<86_400).contains(now.timeIntervalSince(saved.fetchedAt)) {
+            return cachedEpisodes
+        }
+
+        do {
+            let data = try await fetch()
+            try Task.checkCancellation()
+            let episodes = try decode(data, on: now)
+            // Never overwrite a usable cache with a bad response. Disk errors
+            // should not prevent listening when the download itself succeeded.
+            try? save(data, fetchedAt: now)
+            return episodes
+        } catch {
+            if error is CancellationError || (error as? URLError)?.code == .cancelled {
+                throw error
+            }
+            if let cachedEpisodes { return cachedEpisodes }
+            throw error
+        }
+    }
+
+    private func decode(_ data: Data, on date: Date) throws -> [Episode] {
+        let episodes = try JSONDecoder().decode(Catalogue.self, from: data).availableEpisodes(on: date)
+        guard !episodes.isEmpty else { throw CatalogueError.empty }
+        return episodes
+    }
+
+    private func save(_ data: Data, fetchedAt: Date) throws {
+        let directory = cacheURL.deletingLastPathComponent()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        // Downloaded metadata is reproducible and need not occupy iCloud backup.
+        var directoryURL = directory
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? directoryURL.setResourceValues(values)
+        let encoded = try JSONEncoder().encode(SavedCatalogue(fetchedAt: fetchedAt, data: data))
+        try encoded.write(to: cacheURL, options: .atomic)
+    }
+
+    static func download() async throws -> Data {
         let url = URL(string: "https://dreimetadaten.de/data/Serie.json")!
-        let request = URLRequest(url: url, timeoutInterval: 30)
+        // The persistent cache controls freshness, rather than an older HTTP cache.
+        let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 15)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
             throw CatalogueError.badResponse
         }
-        let episodes = try JSONDecoder().decode(Catalogue.self, from: data).availableEpisodes()
-        guard !episodes.isEmpty else { throw CatalogueError.empty }
-        return episodes
+        return data
     }
 }
