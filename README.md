@@ -1,4 +1,4 @@
-# Nächster Fall — minimal SwiftUI app
+# ??? Zu-Fall — minimal SwiftUI app
 
 A native iOS version of `die_drei_fragezeichen_select.py`. Requires Xcode 16 or later and iOS 17 or later. No third-party packages, API keys, or Python installation are needed.
 
