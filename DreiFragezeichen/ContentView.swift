@@ -3,6 +3,7 @@ import UIKit
 
 struct ContentView: View {
     @EnvironmentObject private var listening: ListeningStore
+    @State private var describingEpisode: Episode?
     @State private var editingListening: Episode?
     @Environment(\.openURL) private var openURL
     @State private var episodes: [Episode] = []
@@ -64,7 +65,7 @@ struct ContentView: View {
                             HStack(alignment: .center, spacing: shortLandscape ? 24 : 32) {
                                 VStack(alignment: .leading, spacing: 12) {
                                     if shortLandscape { header(compact: true) }
-                                    EpisodeArtwork(episode: selected)
+                                    episodeArtworkButton(selected)
                                         .id(selected.id)
                                         .frame(width: min(320, max(120, geometry.size.height - (shortLandscape ? 150 : 120))))
                                         .frame(maxWidth: .infinity)
@@ -86,7 +87,7 @@ struct ContentView: View {
                             }
                         } else {
                             VStack(spacing: 16) {
-                                EpisodeArtwork(episode: selected)
+                                episodeArtworkButton(selected)
                                     .id(selected.id)
                                     .frame(width: portraitArtworkSize)
                                 episodeDetails(selected, alignment: .center)
@@ -129,6 +130,7 @@ struct ContentView: View {
                 showingEpisodes = false
             }
         }
+        .sheet(item: $describingEpisode) { EpisodeDescriptionView(episode: $0) }
         .sheet(item: $editingListening) { ListeningStatusView(episode: $0) }
         .sheet(isPresented: $showingSettings) { PlayerSettingsView(player: $player) }
         .task { if episodes.isEmpty { await load() } }
@@ -142,7 +144,7 @@ struct ContentView: View {
 
     private func tabletEpisode(_ episode: Episode, width: CGFloat) -> some View {
         HStack(alignment: .center, spacing: 32) {
-            EpisodeArtwork(episode: episode)
+            episodeArtworkButton(episode)
                 .id(episode.id)
                 .frame(width: min(380, (width - 144) * 0.42))
                 .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
@@ -192,6 +194,15 @@ struct ContentView: View {
         }
     }
 
+    private func episodeArtworkButton(_ episode: Episode) -> some View {
+        Button { describingEpisode = episode } label: {
+            EpisodeArtwork(episode: episode)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Kurzbeschreibung: \(episode.titel)")
+        .accessibilityIdentifier("artworkDescription")
+    }
+
     private func episodeDetails(_ episode: Episode, alignment: HorizontalAlignment) -> some View {
         VStack(alignment: alignment, spacing: 10) {
             HStack {
@@ -221,11 +232,23 @@ struct ContentView: View {
                 .accessibilityLabel("Favoriten und Später hören")
                 .accessibilityValue("\(listening.favourites.contains(episode.id) ? "Favorit" : "Kein Favorit"), \(listening.listenLater.contains(episode.id) ? "Für später gespeichert" : "Nicht für später gespeichert")")
             }
-            Text(episode.titel)
-                .accessibilityIdentifier("selectedEpisodeTitle")
-                .font(.title2.bold())
-                .fixedSize(horizontal: false, vertical: true)
-                .multilineTextAlignment(alignment == .leading ? .leading : .center)
+            Button { describingEpisode = episode } label: {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(episode.titel)
+                        .accessibilityIdentifier("selectedEpisodeTitle")
+                        .font(.title2.bold())
+                        .fixedSize(horizontal: false, vertical: true)
+                        .multilineTextAlignment(alignment == .leading ? .leading : .center)
+                    Image(systemName: "info.circle")
+                        .font(.body)
+                        .foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 44)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("episodeDescription")
+            .accessibilityHint("Öffnet die Kurzbeschreibung der Folge")
         }
         .frame(maxWidth: .infinity, alignment: alignment == .leading ? .leading : .center)
     }

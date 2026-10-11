@@ -132,3 +132,5 @@ large text sizes still need device testing. UI assertions check behaviour and
 control availability, not pixel-perfect appearance.
 
 The “Seit … nicht gehört” suggestion filter has a configurable exclusion period under Settings → Wieder in die Auswahl. Enter 1–3650 days (default 30). The value is saved locally and applies to the next suggestion; other filters are unaffected.
+
+Tap the selected episode title or cover to read its short description. Descriptions come from the existing catalogue cache and remain available offline; missing descriptions show a fallback message.

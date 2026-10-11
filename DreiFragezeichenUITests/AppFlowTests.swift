@@ -17,6 +17,20 @@ final class AppFlowTests: XCTestCase {
         XCUIDevice.shared.orientation = .portrait
     }
 
+    func testEpisodeDescription() {
+        app.buttons["episodeDescription"].tap()
+        XCTAssertTrue(app.staticTexts["episodeSynopsis"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.staticTexts["episodeSynopsis"].label, "Ein rätselhafter Brief führt die Detektive zu einem neuen Fall.")
+        app.buttons["Fertig"].tap()
+        app.buttons["library"].tap()
+        app.buttons["episode-2"].tap()
+        app.buttons["artworkDescription"].tap()
+        XCTAssertTrue(app.staticTexts["episodeSynopsis"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["episodeSynopsis"].label.contains("keine Kurzbeschreibung"))
+        app.buttons["Fertig"].tap()
+        XCTAssertEqual(app.staticTexts["selectedEpisodeTitle"].label, "Testfall 2")
+    }
+
     func testHistoryAndLibrarySelection() {
         XCTAssertEqual(app.staticTexts["selectedEpisodeTitle"].label, "Testfall 1")
         XCTAssertFalse(app.buttons["back"].isEnabled)

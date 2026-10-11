@@ -4,6 +4,10 @@ import XCTest
 
 final class CatalogueChecks: XCTestCase {
     func testRegressionChecks() throws {
+        let descriptions = try JSONDecoder().decode(Catalogue.self, from: Data(#"{"serie":[{"nummer":1,"titel":"One","beschreibung":" Short summary ","gesamtbeschreibung":"Long summary"},{"nummer":2,"titel":"Two","beschreibung":"  ","gesamtbeschreibung":"Fallback"},{"nummer":3,"titel":"Three"}]}"#.utf8)).serie
+        XCTAssertTrue(descriptions[0].synopsis == "Short summary")
+        XCTAssertTrue(descriptions[1].synopsis == "Fallback")
+        XCTAssertTrue(descriptions[2].synopsis == nil)
         let fixture = #"{"serie":[{"nummer":1,"titel":"First","veröffentlichungsdatum":"1979-10-12","links":{"appleMusic":"http://music.apple.com/de/album/123"}},{"nummer":2,"titel":"Future","veröffentlichungsdatum":"2099-01-01"},{"nummer":3,"titel":"No link","links":{"appleMusic":"https://music.apple.com.example.org/123"}}]}"#
         let catalogue = try JSONDecoder().decode(Catalogue.self, from: Data(fixture.utf8))
         let episodes = catalogue.availableEpisodes(on: Date(timeIntervalSince1970: 1_700_000_000))
