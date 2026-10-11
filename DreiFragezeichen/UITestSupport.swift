@@ -13,7 +13,7 @@ enum UITestSupport {
         return defaults
     }()
     static let episodes: [Episode] = (1...5).map {
-        Episode(nummer: $0, titel: "Testfall \($0)", releaseDate: nil, links: nil)
+        Episode(nummer: $0, titel: "Testfall \($0)", releaseDate: nil, links: nil, description: $0 == 1 ? "Ein rätselhafter Brief führt die Detektive zu einem neuen Fall." : nil)
     }
 }
 #endif

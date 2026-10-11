@@ -28,6 +28,16 @@ struct Episode: Decodable, Identifiable {
     let titel: String
     let releaseDate: String?
     let links: Links?
+    var description: String? = nil
+    var fullDescription: String? = nil
+
+    var synopsis: String? {
+        [description, fullDescription].compactMap { value in
+            guard let text = value?.trimmingCharacters(in: .whitespacesAndNewlines), !text.isEmpty else { return nil }
+            return text
+        }.first
+    }
+
 
     struct Links: Decodable {
         let appleMusic: String?
@@ -77,6 +87,8 @@ struct Episode: Decodable, Identifiable {
 
     enum CodingKeys: String, CodingKey {
         case nummer, titel, links
+        case description = "beschreibung"
+        case fullDescription = "gesamtbeschreibung"
         case releaseDate = "veröffentlichungsdatum"
     }
 }
