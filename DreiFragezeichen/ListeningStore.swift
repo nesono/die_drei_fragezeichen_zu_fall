@@ -4,13 +4,13 @@ import Combine
 enum SuggestionPool: String, CaseIterable, Identifiable {
     case all, unheard, favourites, later, notRecent
     var id: String { rawValue }
-    var title: String {
+    func title(excludingDays days: Int = 30) -> String {
         switch self {
         case .all: "Alle Folgen"
         case .unheard: "Nur ungehörte Folgen"
         case .favourites: "Favoriten"
         case .later: "Später hören"
-        case .notRecent: "Seit 30 Tagen nicht gehört"
+        case .notRecent: days == 1 ? "Seit 1 Tag nicht gehört" : "Seit \(days) Tagen nicht gehört"
         }
     }
 }
@@ -29,6 +29,7 @@ final class ListeningStore: ObservableObject {
     @Published private(set) var dates: [String: Date]
     @Published private(set) var favourites: Set<Int>
     @Published private(set) var listenLater: Set<Int>
+    @Published private(set) var exclusionDays: Int
     private var suggested: [String: [Int]]
     private var lastSuggestions: [String: Int]
     private let defaults: UserDefaults
@@ -36,11 +37,21 @@ final class ListeningStore: ObservableObject {
 
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
+        let savedDays = defaults.integer(forKey: "exclusionDays.v1")
+        exclusionDays = Self.exclusionDayRange.contains(savedDays) ? savedDays : 30
         suggested = defaults.dictionary(forKey: "suggestionCycles.v1") as? [String: [Int]] ?? [:]
         lastSuggestions = defaults.dictionary(forKey: "lastSuggestions.v1") as? [String: Int] ?? [:]
         dates = (defaults.dictionary(forKey: key) ?? [:]).compactMapValues { $0 as? Date }
         favourites = Set((defaults.array(forKey: "favourites.v1") as? [Int] ?? []).filter { $0 > 0 })
         listenLater = Set((defaults.array(forKey: "listenLater.v1") as? [Int] ?? []).filter { $0 > 0 })
+    }
+
+    static let exclusionDayRange = 1...3650
+
+    func setExclusionDays(_ days: Int) {
+        guard Self.exclusionDayRange.contains(days) else { return }
+        exclusionDays = days
+        defaults.set(days, forKey: "exclusionDays.v1")
     }
 
     func libraryIDs(_ ids: [Int], filter: LibraryFilter) -> [Int] {
@@ -56,7 +67,7 @@ final class ListeningStore: ObservableObject {
     }
 
     func eligibleIDs(_ ids: [Int], pool: SuggestionPool, now: Date = Date()) -> [Int] {
-        let cutoff = Calendar.current.date(byAdding: .day, value: -30, to: now)!
+        let cutoff = Calendar.current.date(byAdding: .day, value: -exclusionDays, to: now)!
         return ids.filter { id in
             switch pool {
             case .all: true
