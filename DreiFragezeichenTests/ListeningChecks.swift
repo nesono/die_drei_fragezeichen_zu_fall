@@ -8,6 +8,31 @@ final class ListeningChecks: XCTestCase {
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
         let now = Date(timeIntervalSince1970: 1_700_000_000)
+
+        let intervalSuite = "IntervalChecks.\(UUID().uuidString)"
+        let intervalDefaults = UserDefaults(suiteName: intervalSuite)!
+        defer { intervalDefaults.removePersistentDomain(forName: intervalSuite) }
+        let intervalStore = ListeningStore(defaults: intervalDefaults)
+        XCTAssertTrue(intervalStore.exclusionDays == 30)
+        intervalStore.setExclusionDays(7)
+        let boundary = Calendar.current.date(byAdding: .day, value: -7, to: now)!
+        intervalStore.markHeard(1, on: boundary, now: now)
+        intervalStore.markHeard(2, on: boundary.addingTimeInterval(1), now: now)
+        XCTAssertTrue(intervalStore.eligibleIDs([1, 2, 3], pool: .notRecent, now: now) == [1, 3])
+        XCTAssertTrue(intervalStore.eligibleIDs([1, 2, 3], pool: .all, now: now) == [1, 2, 3])
+        XCTAssertTrue(intervalStore.nextSuggestionID(from: [1, 2], pool: .notRecent, currentID: nil, now: now) == 1)
+        XCTAssertTrue(ListeningStore(defaults: intervalDefaults).exclusionDays == 7)
+        intervalStore.setExclusionDays(60)
+        XCTAssertTrue(intervalStore.eligibleIDs([1, 2, 3], pool: .notRecent, now: now) == [3])
+        intervalStore.setExclusionDays(1)
+        XCTAssertTrue(intervalStore.eligibleIDs([1, 2, 3], pool: .notRecent, now: now) == [1, 2, 3])
+        for invalid in [0, -1, 3651, Int.max] { intervalStore.setExclusionDays(invalid) }
+        XCTAssertTrue(intervalStore.exclusionDays == 1)
+        XCTAssertTrue(SuggestionPool.notRecent.title(excludingDays: 1) == "Seit 1 Tag nicht gehört")
+        XCTAssertTrue(SuggestionPool.notRecent.title(excludingDays: 60) == "Seit 60 Tagen nicht gehört")
+        intervalDefaults.set(-10, forKey: "exclusionDays.v1")
+        XCTAssertTrue(ListeningStore(defaults: intervalDefaults).exclusionDays == 30)
+
         let earlier = now.addingTimeInterval(-86_400)
         let store = ListeningStore(defaults: defaults)
         XCTAssertTrue(store.lastListened(to: 1) == nil)

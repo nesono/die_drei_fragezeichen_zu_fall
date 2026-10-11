@@ -99,7 +99,7 @@ struct ContentView: View {
 
                     if !loading && !episodes.isEmpty && selected == nil {
                         ContentUnavailableView("Keine passende Folge", systemImage: "line.3.horizontal.decrease.circle",
-                            description: Text("Für „\(suggestionPool.title)“ sind noch keine Folgen verfügbar."))
+                            description: Text("Für „\(suggestionPool.title(excludingDays: listening.exclusionDays))“ sind noch keine Folgen verfügbar."))
                         Button("Aus allen Folgen wählen") {
                             suggestionPool = .all
                             shuffle()
@@ -252,14 +252,14 @@ struct ContentView: View {
 
             Menu {
                 Picker("Zufallsauswahl", selection: $suggestionPool) {
-                    ForEach(SuggestionPool.allCases) { Text($0.title).tag($0) }
+                    ForEach(SuggestionPool.allCases) { Text($0.title(excludingDays: listening.exclusionDays)).tag($0) }
                 }
             } label: {
-                Label(suggestionPool.title, systemImage: "line.3.horizontal.decrease.circle")
+                Label(suggestionPool.title(excludingDays: listening.exclusionDays), systemImage: "line.3.horizontal.decrease.circle")
                     .font(.caption)
                     .frame(maxWidth: .infinity, alignment: compact ? .leading : .center)
             }
-            .accessibilityLabel("Zufallsauswahl: \(suggestionPool.title)")
+            .accessibilityLabel("Zufallsauswahl: \(suggestionPool.title(excludingDays: listening.exclusionDays))")
             .accessibilityHint("Bestimmt die Auswahl für Nochmal neu")
         }
     }
@@ -378,7 +378,7 @@ struct ContentView: View {
         guard let nextID, let next = episodes.first(where: { $0.id == nextID }) else {
             if selected != nil {
                 notice = eligible.isEmpty
-                    ? "Für „\(suggestionPool.title)“ sind keine Folgen verfügbar. Ändere die Zufallsauswahl unter den Schaltflächen."
+                    ? "Für „\(suggestionPool.title(excludingDays: listening.exclusionDays))“ sind keine Folgen verfügbar. Ändere die Zufallsauswahl unter den Schaltflächen."
                     : "Die aktuelle Folge ist die einzige passende Folge. Ändere die Zufallsauswahl, um eine andere zu finden."
             }
             return
