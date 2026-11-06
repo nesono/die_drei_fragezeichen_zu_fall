@@ -3,6 +3,15 @@ import XCTest
 @testable import DreiFragezeichen
 
 final class CatalogueChecks: XCTestCase {
+    func testDuplicateIDsAndCredentialsInCatalogueLinks() throws {
+        let data = Data(#"{"serie":[{"nummer":1,"titel":" "},{"nummer":1,"titel":"First valid","links":{"appleMusic":"https://user:password@music.apple.com/album/1","cover_itunes":"https://user@example.org/image","cover":"http://example.org/fallback"}},{"nummer":1,"titel":"Duplicate"}]}"#.utf8)
+        let episodes = try JSONDecoder().decode(Catalogue.self, from: data).availableEpisodes()
+        XCTAssertEqual(episodes.map(\.titel), ["First valid"])
+        let episode = try XCTUnwrap(episodes.first)
+        XCTAssertNil(episode.appleMusicURL)
+        XCTAssertEqual(episode.artworkURL?.absoluteString, "https://example.org/fallback")
+    }
+
     func testRegressionChecks() throws {
         let descriptions = try JSONDecoder().decode(Catalogue.self, from: Data(#"{"serie":[{"nummer":1,"titel":"One","beschreibung":" Short summary ","gesamtbeschreibung":"Long summary"},{"nummer":2,"titel":"Two","beschreibung":"  ","gesamtbeschreibung":"Fallback"},{"nummer":3,"titel":"Three"}]}"#.utf8)).serie
         XCTAssertTrue(descriptions[0].synopsis == "Short summary")

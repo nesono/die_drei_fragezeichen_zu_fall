@@ -433,22 +433,16 @@ struct ContentView: View {
         let service = player
         let albumURL = selected.playbackURL(for: service)
         UIPasteboard.general.string = albumURL?.absoluteString ?? selected.searchText
-        if let url = albumURL {
-            openURL(url) { accepted in
-                if accepted {
-                    listening.recordPlayerOpen(selected.id)
-                } else {
-                    notice = "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert."
-                }
-            }
-        } else {
+        if albumURL == nil {
             notice = "Für diese Folge gibt es keinen direkten \(service.name)-Link. Der Titel wurde kopiert."
-            openURL(selected.searchURL(for: service)) { accepted in
-                if accepted {
-                    listening.recordPlayerOpen(selected.id)
-                } else {
-                    notice = "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert."
-                }
+        }
+        openURL(albumURL ?? selected.searchURL(for: service)) { accepted in
+            if accepted {
+                listening.recordPlayerOpen(selected.id)
+            } else {
+                notice = albumURL == nil
+                    ? "Die Suche konnte nicht geöffnet werden. Der Titel wurde kopiert."
+                    : "Der Link konnte nicht geöffnet werden. Er wurde in die Zwischenablage kopiert."
             }
         }
     }

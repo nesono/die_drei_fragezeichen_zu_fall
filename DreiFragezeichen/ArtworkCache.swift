@@ -23,7 +23,12 @@ actor ArtworkCache {
 
     func data(for url: URL) async throws -> Data {
         if let data = memory.object(forKey: url as NSURL) { return data as Data }
-        if let task = pending[url] { return try await task.value }
+        let requestGeneration = generation
+        if let task = pending[url] {
+            let data = try await task.value
+            guard generation == requestGeneration else { throw CancellationError() }
+            return data
+        }
 
         let filename = SHA256.hash(data: Data(url.absoluteString.utf8))
             .map { String(format: "%02x", $0) }.joined()
@@ -35,7 +40,6 @@ actor ArtworkCache {
 
         // Sharing this task avoids duplicate downloads during rotation or quick
         // history navigation. Leaving the view does not cancel a useful download.
-        let requestGeneration = generation
         let fetch = self.fetch
         let task = Task {
             let data = try await fetch(url)
