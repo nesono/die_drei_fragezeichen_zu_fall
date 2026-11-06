@@ -16,9 +16,11 @@ struct Catalogue: Decodable {
         formatter.timeZone = TimeZone(identifier: "Europe/Berlin")
         formatter.dateFormat = "yyyy-MM-dd"
         let today = formatter.string(from: date)
+        var seen = Set<Int>()
         return serie.filter {
             $0.nummer > 0 && !$0.titel.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 && ($0.releaseDate.map { $0 <= today } ?? true)
+                && seen.insert($0.id).inserted
         }
     }
 }
@@ -47,14 +49,20 @@ struct Episode: Decodable, Identifiable {
         let cover_dreifragezeichen: String?
     }
 
+    private static func secureURL(_ raw: String?, hosts: Set<String>? = nil) -> URL? {
+        guard let raw, var components = URLComponents(string: raw),
+              let scheme = components.scheme?.lowercased(), ["http", "https"].contains(scheme),
+              let host = components.host?.lowercased(), !host.isEmpty,
+              hosts?.contains(host) != false,
+              components.user == nil, components.password == nil else { return nil }
+        components.scheme = "https"
+        return components.url
+    }
+
     var artworkURL: URL? {
         // Older catalogue entries use HTTP; request the images securely.
         for value in [links?.cover_itunes, links?.cover_dreifragezeichen, links?.cover] {
-            guard let value, var components = URLComponents(string: value),
-                  let host = components.host, !host.isEmpty,
-                  ["http", "https"].contains(components.scheme?.lowercased() ?? "") else { continue }
-            components.scheme = "https"
-            if let url = components.url { return url }
+            if let url = Self.secureURL(value) { return url }
         }
         return nil
     }
@@ -68,12 +76,8 @@ struct Episode: Decodable, Identifiable {
 
     func playbackURL(for service: PlaybackService) -> URL? {
         let value = service == .appleMusic ? links?.appleMusic : links?.spotify
-        let hosts = service == .appleMusic ? ["music.apple.com", "itunes.apple.com"] : ["open.spotify.com"]
-        guard let value, var components = URLComponents(string: value),
-              let host = components.host?.lowercased(), hosts.contains(host),
-              ["http", "https"].contains(components.scheme?.lowercased() ?? "") else { return nil }
-        components.scheme = "https"
-        return components.url
+        let hosts: Set<String> = service == .appleMusic ? ["music.apple.com", "itunes.apple.com"] : ["open.spotify.com"]
+        return Self.secureURL(value, hosts: hosts)
     }
 
     func searchURL(for service: PlaybackService) -> URL {
@@ -146,8 +150,8 @@ struct EpisodeService {
             try? save(data, fetchedAt: now)
             return episodes
         } catch {
-            if error is CancellationError || (error as? URLError)?.code == .cancelled {
-                throw error
+            if Task.isCancelled || error is CancellationError || (error as? URLError)?.code == .cancelled {
+                throw CancellationError()
             }
             if let cachedEpisodes { return cachedEpisodes }
             throw error
